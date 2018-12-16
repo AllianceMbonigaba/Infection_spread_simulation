@@ -2,9 +2,10 @@ from person import *
 from disease import *
 from aluLib import *
 from random import *
+from csv import *
 
 # Constants for drawing
-WINDOW_WIDTH = 1600
+WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 500
 BAR_HEIGHT = 80
 BAR_Y_COORD = 300
@@ -12,32 +13,38 @@ LEGEND_SIZE = 30
 LEGEND_OFFSET = 250
 LEGEND_TEXT_OFFSET = 210
 
-# Setting up the population
-# The values here are provided as a demo to the visualization, you will want to replace them by
-# user input in your final solution.
-original_population_size = 800  # This should start coming from user input.
-immune_count = 50  # This should start coming from user input.
-infected_count = 50  # This should start coming from user input.
-deceased_count = 50  # This should start at 0 in your final result.
-susceptible_count = original_population_size - immune_count - infected_count - deceased_count
 
-CONTACT_NUMBER = 10  # Constant for how many people each Person meets a day.
+disease_name = input('What is the disease name:')
+# total number of days for our simulation to run
+target_duration = int(input('Input the total number of days to run simulation:'))
+# Setting up the population(From person class)
+population = Person(int(input('Input total population to run the simulation:')),
+                    int(input('Number of initial population infected:')),
+                    0, 0)
+# setting up disease information(from disease class)
+disease = Disease(int(input('Input an estimation of days one can say sick:')),
+                  int(input('Input a contact number per infective:')))
+# The rate of recovery
+recovery_rate = float(input('What is the chance for infected person to recover by next day(use range 0 to 1 eg: 0.4):'))
+original_population_size = population.total_population
+immune_count = population.immune
+infected_count = population.infected
+deceased_count = population.dead
+susceptible_count = population.susceptible
+origin_infected = population.infected
+
 
 # Keep track of how many days it's been
 day_count = 0
-target_duration = 100  # This should start coming from user input.
-
-# You will have to update this list with the right kind of Person objects.
-population = []
 
 
-# You won't need to change this function, it will display a visual summary of each population
+# displaying visual summary of each population
 def draw_status():
     clear()
     set_font_size(24)
-    draw_text("Total population is: " + str(immune_count + infected_count + susceptible_count), 10, 30)
+    draw_text("Total population is: " + str(immune_count + infected_count + susceptible_count + deceased_count), 10, 30)
 
-    draw_text("Simulation has been running for " + str(day_count) + " days", 10, 75)
+    draw_text("Simulation for " + disease_name + " has been running for " + str(day_count) + " days", 10, 75)
 
     # Figure out how large we should make each population
     susceptible_width = (susceptible_count / original_population_size) * WINDOW_WIDTH
@@ -79,30 +86,69 @@ def draw_status():
     draw_text('Dead', WINDOW_WIDTH - LEGEND_TEXT_OFFSET, 195)
 
 
+# updating the number of infected_count on a daily basis
 def check_the_infected():
-    # Go over your population and check on each infected person
-    # Did they get better today? Did they pass away?
-    pass
+    global infected_count
+    # calculating the number of new case of the infected_count per day
+    population.infected = population.infected + disease.new_case_infected(population.infected, population)
+    infected_count = round(population.infected)  # updating infected_count
 
 
+# updating the number of susceptible_count on a daily basis
 def check_the_susceptible():
-    # Go over your population and check on each susceptible person
-    # Who did they meet today? Did they get infected from anyone?
-    pass
+    global susceptible_count
+    # calculating the number of new case of the susceptible_count per day
+    population.susceptible = population.susceptible - disease.new_case_susceptible(population)
+    susceptible_count = round(population.susceptible) # updating susceptible_count
 
 
+# this function checks deceased or immune people on a daily basis
+# it proves both numbers on a daily basis
+def check_diseased_or_immune():
+    global deceased_count, immune_count
+    daily_immune = 0
+    daily_deceased = 0
+    # removed_population: is number of people who are not in susceptible and are not infected
+    removed_population = original_population_size - (susceptible_count + infected_count)
+
+    # checking each person in removed_population
+    # whether the person recovers or is diseased
+    for x in range(removed_population):
+        if random() <= recovery_rate:
+            daily_deceased += 1
+        elif recovery_rate == 0:
+            deceased_count = 0
+        else:
+            daily_immune += 1
+    # updating deceased_count and immune_count
+    deceased_count = daily_deceased
+    immune_count = daily_immune
+
+
+# writing a header of csv file
+with open("simulation_report.csv", "a") as f:
+    f.write("total_population,susceptible,infected,immune,deceased" + '\n')
+
+
+# writing csv file report
 def write_csv():
-    # Each cycle, you should write down the values of each population into a csv file, so that we can export our data
-    # to a spreadsheet and share it with others.
-    pass
+    with open("simulation_report.csv", "a") as csv_file:
+        csv_file.write(str(original_population_size) + ',' + str(susceptible_count)+','+str(infected_count)+','+str(immune_count)+','+str(deceased_count) + "\n")
 
 
 def generate_final_report():
-    # Once your simulation is done, you must print out the following:
-    # What percentage of the population survived?
-    # What is R0?
-    # Does that mean we've suffered an epidemic?
-    pass
+    # percentage of the population survived?
+    print('survival percent: ' + str(((susceptible_count + immune_count)/original_population_size) * 100))
+
+    # calculating R0?
+    r0 = ((infected_count + deceased_count)/origin_infected)/origin_infected
+    print('Ro:' + str(r0))
+
+    # checking whether we suffered epidemic or not
+    if r0 >= 1:
+        print('This is an epidemic')
+    else:
+        print('This not epidemic')
 
 
 def main():
@@ -115,6 +161,8 @@ def main():
 
     # Loop over the healthy population to determine if they can catch the disease
     check_the_susceptible()
+
+    check_diseased_or_immune()
 
     # Update our output CSV
     write_csv()
