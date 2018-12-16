@@ -22,7 +22,7 @@ population = Person(int(input('Input total population to run the simulation:')),
                     int(input('Number of initial population infected:')),
                     0, 0)
 # setting up disease information(from disease class)
-disease = Disease(int(input('Input an estimation of days one can say sick:')),
+disease = Disease(int(input('Input an estimation of days one can stay sick:')),
                   int(input('Input a contact number per infective:')))
 # The rate of recovery
 recovery_rate = float(input('What is the chance for infected person to recover by next day(use range 0 to 1 eg: 0.4):'))
@@ -114,7 +114,7 @@ def check_diseased_or_immune():
     # checking each person in removed_population
     # whether the person recovers or is diseased
     for x in range(removed_population):
-        if random() <= recovery_rate:
+        if random() <= recovery_rate and not 0:
             daily_deceased += 1
         elif recovery_rate == 0:
             deceased_count = 0
